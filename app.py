@@ -17,7 +17,7 @@ data_option = st.sidebar.radio("Choose data source", ["Sample CSV", "Upload CSV"
 if data_option == "Upload CSV":
 uploaded = st.sidebar.file_uploader("Upload CSV with Timestamp and device columns", type=["csv"])
 if uploaded is not None:
-df = pd.read_csv(uploaded)
+    df = pd.read_csv(uploaded)
 else:
 st.info("Upload a CSV to proceed or switch to Sample CSV.")
 st.stop()
