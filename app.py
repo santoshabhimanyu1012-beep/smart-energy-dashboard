@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from fpdf import FPDF  # fpdf2
 
 # Page setup
 st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide")
@@ -72,7 +71,6 @@ fig_line = px.line(agg.reset_index(), x="Timestamp", y=selected_devices,
 st.plotly_chart(fig_line, use_container_width=True)
 
 # Totals (kWh) approximation
-# Sum of Watts over timestamps, divided by 1000 => kWh (assuming each row represents 1 hour)
 kwh_per_device = (work[selected_devices].sum()) / 1000.0
 
 # Summary table
@@ -111,36 +109,9 @@ with tab2:
     st.write("Monthly kWh and Costs")
     st.dataframe(monthly_costs[selected_devices])
 
-# Export options
+# Export options (CSV only)
 st.subheader("📥 Export Summary")
-
-# Export as CSV
 csv = summary.to_csv().encode("utf-8")
 st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
-
-# Export as PDF (Unicode-safe using a TrueType font)
-# Place a Unicode TTF font (e.g., DejaVuSans.ttf) in your repo and point to it here.
-PDF_FONT_PATH = "DejaVuSans.ttf"  # or "fonts/DejaVuSans.ttf" if you use a fonts/ folder
-
-pdf = FPDF()
-pdf.add_page()
-try:
-    # Register a Unicode font and use it
-    pdf.add_font("DejaVu", "", PDF_FONT_PATH, uni=True)
-    pdf.set_font("DejaVu", size=12)
-except Exception:
-    # Fallback to core font (might not render ₹ or non-Latin characters)
-    pdf.set_font("Arial", size=12)
-
-pdf.cell(0, 10, txt="Smart Energy Monitoring Summary", ln=True, align="C")
-pdf.ln(5)
-
-for device, row in summary.iterrows():
-    line = f"{device}: {row['Total kWh']} kWh, Cost ₹{row['Estimated Cost (INR)']}"
-    pdf.multi_cell(0, 8, txt=line)
-
-# fpdf2 returns bytes with dest="S"; no manual encoding needed
-pdf_output = pdf.output(dest="S")
-st.download_button("Download Summary as PDF", pdf_output, "summary.pdf", "application/pdf")
 
 st.caption("Tip: Use the sidebar to upload your CSV, filter devices, and switch views (Hourly/Daily/Weekly/Monthly).")
