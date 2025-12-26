@@ -9,8 +9,11 @@ st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide"
 with open("theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Logo (optional)
-st.image("logo.png", width=120)
+# Logo (safe loading)
+try:
+    st.image("logo.png", width=120)
+except Exception:
+    st.warning("Logo not found or invalid format. Please check logo.png in your repo.")
 
 # Title
 st.markdown("<h1>⚡ Smart Energy Monitoring Dashboard</h1>", unsafe_allow_html=True)
@@ -127,7 +130,8 @@ st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
 # Footer
 st.markdown("""
     <hr style="margin-top:40px; margin-bottom:10px;">
-    <div style="text-align:center; color:gray;">
-        © 2025 Smart Energy Dashboard | Built by Santosh
+    <div style="text-align:center; color:gray; font-size:14px;">
+        © 2025 Smart Energy Dashboard | Built by Santosh Abhimanyu  
+        <br>📧 santosh@example.com | 🌐 www.smartenergydashboard.com
     </div>
 """, unsafe_allow_html=True)
