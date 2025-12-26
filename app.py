@@ -4,23 +4,31 @@ import plotly.express as px
 
 # Page setup
 st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide")
-st.markdown("<h1 style='color:#2c3e50;'>⚡ Smart Energy Monitoring Dashboard</h1>", unsafe_allow_html=True)
 
-# Sidebar inputs
+# Load custom CSS theme
+with open("theme.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Optional logo (place logo.png in your folder)
+# st.image("logo.png", width=120)
+
+st.markdown("<h1>⚡ Smart Energy Monitoring Dashboard</h1>", unsafe_allow_html=True)
+
+# Sidebar filters
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header("🔧 Filters")
+    device_type = st.selectbox("Device Type", ["All", "Fan", "Light", "Fridge", "TV"])
+    time_granularity = st.selectbox("Time View", ["Hourly", "Daily", "Weekly", "Monthly"])
     tariff = st.number_input("Tariff (₹ per kWh)", min_value=0.0, value=8.0, step=0.5)
-    time_granularity = st.radio("Time view", ["Hourly", "Daily", "Weekly", "Monthly"])
-    st.header("📂 Data source")
-    data_option = st.radio("Choose data source", ["Upload CSV", "Use sample data"])
+    data_option = st.radio("Data Source", ["Upload CSV", "Use Sample"])
     uploaded = None
     if data_option == "Upload CSV":
-        uploaded = st.file_uploader("Upload CSV with Timestamp and device columns", type=["csv"])
+        uploaded = st.file_uploader("Upload CSV", type=["csv"])
 
 # Load data
 if data_option == "Upload CSV" and uploaded:
     df = pd.read_csv(uploaded)
-elif data_option == "Use sample data":
+elif data_option == "Use Sample":
     df = pd.DataFrame({
         "Timestamp": [
             "2025-12-26 08:00","2025-12-26 09:00","2025-12-26 10:00",
@@ -47,12 +55,14 @@ if not device_cols:
     st.error("CSV must include device columns like 'Fan (W)', 'Fridge (W)', etc.")
     st.stop()
 
-# Layout: raw data preview
-with st.container():
-    st.subheader("📊 Raw Data Preview")
-    st.dataframe(df, use_container_width=True)
+# Filter by device type
+if device_type != "All":
+    device_cols = [col for col in device_cols if device_type in col]
+    if not device_cols:
+        st.warning(f"No data found for {device_type}")
+        st.stop()
 
-# Aggregate by chosen time view
+# Aggregate by time view
 work = df.copy().set_index("Timestamp")
 if time_granularity == "Hourly":
     agg = work.resample("H").mean()
@@ -63,57 +73,54 @@ elif time_granularity == "Weekly":
 else:
     agg = work.resample("M").mean()
 
-# Device filtering
-selected_devices = st.multiselect("🔍 Select devices to display", device_cols, default=device_cols)
+# Totals
+kwh_per_device = (work[device_cols].sum()) / 1000.0
+costs = kwh_per_device * tariff
+total_kwh = kwh_per_device.sum()
+total_cost = costs.sum()
 
-# Charts in columns
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("📈 Power Usage Trends")
-    fig_line = px.line(agg.reset_index(), x="Timestamp", y=selected_devices,
+# KPI cards
+st.markdown("<div class='metric-container'>", unsafe_allow_html=True)
+col1, col2, col3 = st.columns(3)
+col1.metric("🔌 Total kWh", f"{total_kwh:.2f}")
+col2.metric("💰 Estimated Cost", f"₹{total_cost:.2f}")
+col3.metric("📁 Records", f"{len(df)} rows")
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Device breakdown table
+st.subheader("📊 Device Breakdown")
+summary = pd.DataFrame({
+    "Total kWh": kwh_per_device.round(3),
+    "Estimated Cost (INR)": costs.round(2)
+})
+st.dataframe(summary, use_container_width=True)
+
+# Charts in tabs
+st.subheader("📈 Visual Trends")
+tab1, tab2, tab3 = st.tabs(["Line Chart", "Bar Chart", "Pie Chart"])
+
+with tab1:
+    fig_line = px.line(agg.reset_index(), x="Timestamp", y=device_cols,
                        labels={"value":"Power (W)","variable":"Device"})
     st.plotly_chart(fig_line, use_container_width=True)
 
-with col2:
-    st.subheader("📊 Device Comparison")
-    kwh_per_device = (work[selected_devices].sum()) / 1000.0
+with tab2:
     fig_bar = px.bar(x=kwh_per_device.index, y=kwh_per_device.values,
                      labels={"x":"Device","y":"Total kWh"})
     st.plotly_chart(fig_bar, use_container_width=True)
 
-# Summary table
-st.subheader("💰 Total Consumption and Cost")
-costs = kwh_per_device * tariff
-summary = pd.DataFrame({"Total kWh": kwh_per_device.round(3),
-                        "Estimated Cost (INR)": costs.round(2)})
-st.table(summary)
+with tab3:
+    fig_pie = px.pie(values=kwh_per_device.values, names=kwh_per_device.index)
+    st.plotly_chart(fig_pie, use_container_width=True)
 
-# Pie chart
-st.subheader("🍕 Device Contribution")
-fig_pie = px.pie(values=kwh_per_device.values, names=kwh_per_device.index)
-st.plotly_chart(fig_pie, use_container_width=True)
+# Top contributors
+st.subheader("🏆 Top Energy Consumers")
+top_devices = summary.sort_values("Total kWh", ascending=False).head(3)
+st.table(top_devices)
 
-# Weekly and Monthly summaries
-st.subheader("📅 Time-Based Summaries")
-tab1, tab2 = st.tabs(["Weekly", "Monthly"])
-
-with tab1:
-    weekly = work.resample("W").sum() / 1000.0
-    weekly_costs = (weekly * tariff).round(2)
-    st.line_chart(weekly[selected_devices])
-    st.write("Weekly kWh and Costs")
-    st.dataframe(weekly_costs[selected_devices])
-
-with tab2:
-    monthly = work.resample("M").sum() / 1000.0
-    monthly_costs = (monthly * tariff).round(2)
-    st.line_chart(monthly[selected_devices])
-    st.write("Monthly kWh and Costs")
-    st.dataframe(monthly_costs[selected_devices])
-
-# Export CSV
+# Export
 st.subheader("📥 Export Summary")
 csv = summary.to_csv().encode("utf-8")
 st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
 
-st.caption("Use the sidebar to upload your CSV, filter devices, and switch views. Your dashboard is now sleek and interactive!")
+st.caption("Use the sidebar to filter by device type, time view, and upload your own data.")
