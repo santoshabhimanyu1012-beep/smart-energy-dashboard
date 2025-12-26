@@ -19,7 +19,7 @@ if data_option == "Upload CSV":
 if uploaded is not None:
     df = pd.read_csv(uploaded)
 else:
-st.info("Upload a CSV to proceed or switch to Sample CSV.")
+    st.info("Upload a CSV to proceed or switch to Sample CSV.")
 st.stop()
 else:
 # Sample dataset
