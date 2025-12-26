@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from fpdf import FPDF
+from fpdf import FPDF   # now using fpdf2 (install via requirements.txt)
 
 # Page setup
 st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide")
@@ -118,7 +118,7 @@ st.subheader("📥 Export Summary")
 csv = summary.to_csv().encode("utf-8")
 st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
 
-# Export as PDF (with utf-8 encoding fix)
+# Export as PDF (fpdf2 handles UTF-8 correctly)
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Arial", size=12)
