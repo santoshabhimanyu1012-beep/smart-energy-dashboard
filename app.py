@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from fpdf import FPDF
 
 # Page setup
 st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide")
@@ -62,15 +63,18 @@ elif time_granularity == "Weekly":
 else:
     agg = work.resample("M").mean()
 
+# Device filtering
+selected_devices = st.multiselect("Select devices to display", device_cols, default=device_cols)
+
 # Charts: trends
 st.subheader(f"{time_granularity} power usage trends (W)")
-fig_line = px.line(agg.reset_index(), x="Timestamp", y=device_cols,
+fig_line = px.line(agg.reset_index(), x="Timestamp", y=selected_devices,
                    labels={"value":"Power (W)","variable":"Device"})
 st.plotly_chart(fig_line, use_container_width=True)
 
 # Totals (kWh) approximation
 period_hours = 1
-kwh_per_device = (work[device_cols].sum() * period_hours) / 1000.0
+kwh_per_device = (work[selected_devices].sum() * period_hours) / 1000.0
 
 # Summary table
 st.subheader("💰 Total consumption per device (kWh) and estimated cost")
@@ -90,4 +94,41 @@ fig_bar = px.bar(x=kwh_per_device.index, y=kwh_per_device.values,
                  labels={"x":"Device","y":"Total kWh"})
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("Tip: Use the sidebar to upload your CSV and switch views (Hourly/Daily/Weekly/Monthly).")
+# Weekly and Monthly summaries
+st.subheader("📅 Weekly and Monthly Summaries")
+tab1, tab2 = st.tabs(["Weekly", "Monthly"])
+
+with tab1:
+    weekly = work.resample("W").sum() / 1000.0
+    weekly_costs = weekly * tariff
+    st.line_chart(weekly[selected_devices])
+    st.write("Weekly kWh and Costs")
+    st.dataframe(weekly_costs.round(2))
+
+with tab2:
+    monthly = work.resample("M").sum() / 1000.0
+    monthly_costs = monthly * tariff
+    st.line_chart(monthly[selected_devices])
+    st.write("Monthly kWh and Costs")
+    st.dataframe(monthly_costs.round(2))
+
+# Export options
+st.subheader("📥 Export Summary")
+
+# Export as CSV
+csv = summary.to_csv().encode("utf-8")
+st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
+
+# Export as PDF
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Arial", size=12)
+pdf.cell(200, 10, txt="Smart Energy Monitoring Summary", ln=True, align="C")
+
+for device, row in summary.iterrows():
+    pdf.cell(200, 10, txt=f"{device}: {row['Total kWh']} kWh, Cost ₹{row['Estimated Cost (INR)']}", ln=True)
+
+pdf_output = pdf.output(dest="S").encode("latin-1")
+st.download_button("Download Summary as PDF", pdf_output, "summary.pdf", "application/pdf")
+
+st.caption("Tip: Use the sidebar to upload your CSV, filter devices, and switch views (Hourly/Daily/Weekly/Monthly).")
