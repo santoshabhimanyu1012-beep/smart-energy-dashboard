@@ -1,0 +1,4 @@
+smart-energy-dashboard/
+├── app.py
+├── theme.css
+└── logo.png # your logo image file

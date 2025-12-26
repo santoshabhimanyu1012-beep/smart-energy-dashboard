@@ -9,9 +9,10 @@ st.set_page_config(page_title="Smart Energy Monitoring Dashboard", layout="wide"
 with open("theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Optional logo (place logo.png in your folder)
-# st.image("logo.png", width=120)
+# Logo (optional)
+st.image("logo.png", width=120)
 
+# Title
 st.markdown("<h1>⚡ Smart Energy Monitoring Dashboard</h1>", unsafe_allow_html=True)
 
 # Sidebar filters
@@ -123,4 +124,10 @@ st.subheader("📥 Export Summary")
 csv = summary.to_csv().encode("utf-8")
 st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
 
-st.caption("Use the sidebar to filter by device type, time view, and upload your own data.")
+# Footer
+st.markdown("""
+    <hr style="margin-top:40px; margin-bottom:10px;">
+    <div style="text-align:center; color:gray;">
+        © 2025 Smart Energy Dashboard | Built by Santosh
+    </div>
+""", unsafe_allow_html=True)
