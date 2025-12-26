@@ -24,7 +24,6 @@ if data_option == "Upload CSV":
         st.info("Upload a CSV to proceed or switch to Sample CSV.")
         st.stop()
 else:
-    # Sample dataset
     df = pd.DataFrame({
         "Timestamp": [
             "2025-12-26 08:00","2025-12-26 09:00","2025-12-26 10:00",
@@ -119,16 +118,17 @@ st.subheader("📥 Export Summary")
 csv = summary.to_csv().encode("utf-8")
 st.download_button("Download Summary as CSV", csv, "summary.csv", "text/csv")
 
-# Export as PDF
+# Export as PDF (with utf-8 encoding fix)
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Arial", size=12)
 pdf.cell(200, 10, txt="Smart Energy Monitoring Summary", ln=True, align="C")
 
 for device, row in summary.iterrows():
-    pdf.cell(200, 10, txt=f"{device}: {row['Total kWh']} kWh, Cost ₹{row['Estimated Cost (INR)']}", ln=True)
+    line = f"{device}: {row['Total kWh']} kWh, Cost ₹{row['Estimated Cost (INR)']}"
+    pdf.cell(200, 10, txt=line, ln=True)
 
-pdf_output = pdf.output(dest="S").encode("latin-1")
+pdf_output = pdf.output(dest="S").encode("utf-8")
 st.download_button("Download Summary as PDF", pdf_output, "summary.pdf", "application/pdf")
 
 st.caption("Tip: Use the sidebar to upload your CSV, filter devices, and switch views (Hourly/Daily/Weekly/Monthly).")
